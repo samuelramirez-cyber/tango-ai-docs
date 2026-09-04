@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Redireccionando... &mdash; Portal de Documentacion &mdash; Framework Tango AI</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #0b1220;
+    color: #e2e8f0;
+    font-family: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  }
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 300px;
+    flex-shrink: 0;
+    background: #0f172a;
+    border-right: 1px solid #334155;
+    padding: 20px 14px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .sidebar h3 {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #94a3b8;
+    margin: 0 0 14px 6px;
+  }
+  .nav-group-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+    margin: 18px 6px 6px;
+  }
+  .nav-item {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: transparent;
+    border: none;
+    color: #cbd5e1;
+    padding: 9px 10px;
+    border-radius: 8px;
+    font-size: 0.86rem;
+    cursor: pointer;
+    margin-bottom: 2px;
+    font-family: inherit;
+  }
+  .nav-item:hover { background: #1e293b; color: #f1f5f9; }
+  .nav-item.active { background: #1e3a5f; color: #38bdf8; font-weight: 600; }
+  .nav-icono { margin-right: 6px; }
+  .content { flex: 1; padding: 32px 40px 64px; max-width: 980px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .doc-meta {
+    color: #64748b;
+    font-size: 0.78rem;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #334155;
+  }
+  .doc-meta code { color: #38bdf8; background: none; }
+  .doc-content h1 { font-size: 1.6rem; margin: 0 0 14px; color: #f8fafc; }
+  .doc-content h2 { font-size: 1.2rem; margin: 28px 0 10px; color: #f1f5f9; border-top: 1px solid #1e293b; padding-top: 18px; }
+  .doc-content h3 { font-size: 1.02rem; margin: 18px 0 8px; color: #e2e8f0; }
+  .doc-content p { line-height: 1.65; color: #cbd5e1; margin: 0 0 12px; font-size: 0.94rem; }
+  .doc-content ul, .doc-content ol { color: #cbd5e1; line-height: 1.6; margin: 0 0 14px; padding-left: 22px; font-size: 0.94rem; }
+  .doc-content li { margin-bottom: 4px; }
+  .doc-content li.checklist { list-style: none; margin-left: -22px; }
+  .doc-content strong { color: #f1f5f9; }
+  .doc-content code { background: #1e293b; border: 1px solid #334155; border-radius: 4px; padding: 1px 6px; font-size: 0.85em; color: #7dd3fc; }
+  .doc-content pre { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 14px 16px; overflow-x: auto; margin: 0 0 16px; }
+  .doc-content pre code { border: none; background: none; padding: 0; color: #a5f3fc; }
+  .doc-content blockquote { border-left: 3px solid #38bdf8; margin: 0 0 16px; padding: 4px 16px; background: #111c33; border-radius: 0 8px 8px 0; }
+  .doc-content blockquote p { color: #dbeafe; margin: 6px 0; }
+  .doc-content hr { border: none; border-top: 1px solid #334155; margin: 20px 0; }
+  .doc-content a.doc-link { color: #38bdf8; text-decoration: underline; cursor: pointer; }
+  .doc-content a[target="_blank"] { color: #38bdf8; }
+  .table-wrap { overflow-x: auto; margin: 0 0 16px; }
+  .doc-content table { border-collapse: collapse; width: 100%; font-size: 0.88rem; }
+  .doc-content th, .doc-content td { border: 1px solid #334155; padding: 8px 10px; text-align: left; }
+  .doc-content th { background: #1e293b; color: #f1f5f9; }
+  .doc-content td { color: #cbd5e1; }
+  @media (max-width: 800px) {
+    .app { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; position: relative; }
+    .content { padding: 20px; }
+  }
+
+  /* --- Bloque de Resumen de Cumplimiento (reutilizado de generate_dashboard.py) --- */
+  #panel-resumen header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 16px;
+    border-bottom: 1px solid #334155;
+    padding-bottom: 20px;
+    margin-bottom: 28px;
+  }
+  #panel-resumen header h1 { margin: 0 0 4px; font-size: 1.6rem; color: #f8fafc; letter-spacing: 0.02em; }
+  #panel-resumen header p { margin: 0; color: #94a3b8; font-size: 0.9rem; }
+  .summary-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .card { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 18px 20px; }
+  .card .label { color: #94a3b8; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
+  .card .value { font-size: 1.7rem; font-weight: 700; color: #f1f5f9; }
+  .card.estado .value.ok { color: #22c55e; }
+  .card.estado .value.alerta { color: #ef4444; }
+  .progress-track { width: 100%; height: 10px; background: #0b1220; border-radius: 999px; overflow: hidden; margin-top: 10px; border: 1px solid #334155; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, #38bdf8, #22c55e); }
+  .categoria { margin-bottom: 28px; }
+  .categoria-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .categoria-header h2 { font-size: 1.1rem; margin: 0; display: flex; align-items: center; gap: 8px; color: #f1f5f9; }
+  .categoria-header .contador { background: #1e293b; border: 1px solid #334155; border-radius: 999px; padding: 4px 12px; font-size: 0.85rem; color: #38bdf8; font-weight: 600; }
+  .items-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  #panel-resumen .item { background: #1e293b; border: 1px solid #334155; border-radius: 10px; padding: 14px 16px; }
+  .item-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  #panel-resumen .codigo { font-weight: 700; letter-spacing: 0.03em; color: #38bdf8; }
+  .badge { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.04em; padding: 3px 8px; border-radius: 999px; }
+  .badge-ok { background: rgba(34,197,94,0.15); color: #22c55e; border: 1px solid rgba(34,197,94,0.4); }
+  .badge-falta { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.4); }
+  #panel-resumen .archivo { font-size: 0.85rem; color: #e2e8f0; margin-bottom: 4px; word-break: break-word; }
+  #panel-resumen .meta { font-size: 0.75rem; color: #94a3b8; }
+</style>
+</head>
+<body>
+  <div class="app">
+    <nav class="sidebar">
+      <h3>Framework Tango AI</h3>
+      <button class="nav-item active" data-target="panel-resumen" onclick="mostrarDoc('panel-resumen')"><span class="nav-icono">&#128202;</span> Resumen de Cumplimiento (12/12)</button>
+<div class="nav-group-label">&#9878; Gobernanza</div>
+<button class="nav-item" data-target="doc-governance-01principioseticoscolombia" onclick="mostrarDoc('doc-governance-01principioseticoscolombia')">Principios Éticos para el Uso de IA (G39)</button>
+<button class="nav-item" data-target="doc-governance-02procesoscumplimientosic" onclick="mostrarDoc('doc-governance-02procesoscumplimientosic')">Proceso de Cumplimiento Legal en Proyectos con Clientes (G40)</button>
+<button class="nav-item" data-target="doc-governance-03politicasusoresponsableia" onclick="mostrarDoc('doc-governance-03politicasusoresponsableia')">Política Interna de Uso Responsable de IA Generativa (G43)</button>
+<button class="nav-item" data-target="doc-governance-04estatutocomitegobernanza" onclick="mostrarDoc('doc-governance-04estatutocomitegobernanza')">Estatuto del Comité de Gobernanza de IA (G44)</button>
+<button class="nav-item" data-target="doc-governance-05procedimientoaprobacionr6" onclick="mostrarDoc('doc-governance-05procedimientoaprobacionr6')">Procedimiento de Aprobación de Herramientas de IA de Terceros (R6)</button>
+<div class="nav-group-label">&#128101; Personas y Cultura</div>
+<button class="nav-item" data-target="doc-culturepeople-01planfuerzalaboralcst" onclick="mostrarDoc('doc-culturepeople-01planfuerzalaboralcst')">Plan de Fuerza Laboral: Upskilling y Reskilling ante la IA (P29)</button>
+<button class="nav-item" data-target="doc-culturepeople-02plangestioncambio" onclick="mostrarDoc('doc-culturepeople-02plangestioncambio')">Plan de Gestión del Cambio para Adopción de IA (P30)</button>
+<button class="nav-item" data-target="doc-culturepeople-03matrizrevisionroles" onclick="mostrarDoc('doc-culturepeople-03matrizrevisionroles')">Matriz de Revisión Periódica de Roles y Descripciones de Cargo (P34)</button>
+<button class="nav-item" data-target="doc-culturepeople-04kitcampanassensibilizacion" onclick="mostrarDoc('doc-culturepeople-04kitcampanassensibilizacion')">Kit de Campañas de Sensibilización sobre Uso Seguro y Ético de IA (P35)</button>
+<div class="nav-group-label">&#128200; Datos y Producto (Growth)</div>
+<button class="nav-item" data-target="doc-growthops-dossiergocurador" onclick="mostrarDoc('doc-growthops-dossiergocurador')">Dossier de Producto: GO CURADOR (V18)</button>
+    </nav>
+    <main class="content">
+      <div class="panel active" id="panel-resumen">
+        
+    <header>
+      <div>
+        <h1>Dashboard de Cumplimiento &mdash; Framework Tango AI</h1>
+        <p>COMUNICACIONES INTEGRADAS LA RED 360 S.A.S. &middot; Kit Operativo de Gobernanza, Personas y Producto IA</p>
+      </div>
+      <p>Fecha limite del plan: 2026-09-30</p>
+    </header>
+
+    <div class="summary-cards">
+      <div class="card estado">
+        <div class="label">Estado global</div>
+        <div class="value ok">CUMPLIMIENTO COMPLETO</div>
+      </div>
+      <div class="card">
+        <div class="label">Tareas verificadas</div>
+        <div class="value">12 / 12</div>
+        <div class="progress-track"><div class="progress-fill" style="width:100%"></div></div>
+      </div>
+      <div class="card">
+        <div class="label">Ultima auditoria</div>
+        <div class="value" style="font-size:1.1rem;">2026-09-04 06:41:48</div>
+      </div>
+    </div>
+
+    
+    <section class="categoria">
+      <div class="categoria-header">
+        <h2><span class="icono">&#9878;</span> Gobernanza</h2>
+        <span class="contador">5/5</span>
+      </div>
+      <div class="items-grid">
+      <div class="item">
+        <div class="item-top">
+          <span class="codigo">G39</span>
+          <span class="badge badge-ok">VERIFICADO</span>
+        </div>
+        <div class="archivo">governance/01_principios_eticos_colombia.md</div>
+        <div class="meta">Responsable: Directora Ejecutiva &middot; N/A (documento)</div>
+      </div>
+      <div class="item">
+        <div class="item-top">
+          <span class="codigo">G40</span>
+          <span class="badge badge-ok">VERIFICADO</span>
+        </div>
+        <div class="archivo">governance/02_procesos_cumplimiento_sic.md</div>
+        <div class="meta">Responsable: Directora Ejecutiva &middot; N/A (documento)</div>
+      </div>
+      <div class="item">
+        <div class="item-top">
+          <span class="codigo">G43</span>
+          <span class="badge badge-ok">VERIFICADO</span>
+        </div>
+        <div class="archivo">governance/03_politicas_uso_responsable_ia.md</div>
+        <div class="meta">Responsable: Directora Ejecutiva &middot; N/A (documento)</div>
+      </div>
+      <div class="item">
+        <div class="item-top">
+          <span class="codigo">G44</span>
+          <span class="badge badge-ok">VERIFICADO</span>
+        </div>
+        <div class="archivo">governance/04_estatuto_comite_gobernanza.md</div>
+        <div class="meta">Responsable: Directora Ejecutiva &middot; N/A (documento)</div>
+      </div>
+      <div class="item">
+        <div class="item-top">
+          <span class="codigo">R6</span>
+          <span class="badge badge-ok">VERIFICADO</span>
+        </div>
+        <div class="archivo">governance/05_procedimiento_aprobacion_r6.md</div>
+        <div class="meta">Responsable: Directora Ejecutiva &middot; N/A (documento)</div>
+      </div>
+      </div>
+    </section>
+    <section class="categoria">
+      <div class="categoria-header">
+        <h2><span class="icono">&#128101;</span> Personas y Cultura</h2>
+        <span class="contador">4/4</span>
+      </div>
+      <div class="items-grid">
+      <div class="item">
+        <div class="item-top">
+          <span class="codigo">P29</span>
+          <span class="badge badge-ok">VERIFICADO</span>
+        </div>
+        <div class="archivo">culture_people/01_plan_fuerza_laboral_cst.md</div>
+        <div class="meta">Responsable: Growth &middot; N/A (documento)</div>
+      </div>
+      <div class="item">
+        <div class="item-top">
+          <span class="codigo">P30</span>
+          <span class="badge badge-ok">VERIFICADO</span>
+        </div>
+        <div class="archivo">culture_people/02_plan_gestion_cambio.md</div>
+        <div class="meta">Responsable: Growth &middot; N/A (documento)</div>
+      </div>
+      <div class="item">
+        <div class="item-top">
+          <span class="codigo">P34</span>
+          <span class="badge badge-ok">VERIFICADO</span>
+        </div>
+        <div class="archivo">culture_people/03_matriz_revision_roles.md</div>
+        <div class="meta">Responsable: Growth &middot; N/A (documento)</div>
+      </div>
+      <div class="item">
+        <div class="item-top">
+          <span class="codigo">P35</span>
+          <span class="badge badge-ok">VERIFICADO</span>
+        </div>
+        <div class="archivo">culture_people/04_kit_campanas_sensibilizacion.md</div>
+        <div class="meta">Responsable: Growth &middot; N/A (documento)</div>
+      </div>
+      </div>
+    </section>
+    <section class="categoria">
+      <div class="categoria-header">
+        <h2><span class="icono">&#128200;</span> Datos y Producto (Growth)</h2>
+        <span class="contador">3/3</span>
+      </div>
+      <div class="items-grid">
+      <div class="item">
+        <div class="item-top">
+          <span class="codigo">D57</span>
+          <span class="badge badge-ok">VERIFICADO</span>
+        </div>
+        <div class="archivo">growth_ops/data_assessment.py</div>
+        <div class="meta">Responsable: Growth &middot; Prueba funcional OK</div>
+      </div>
+      <div class="item">
+        <div class="item-top">
+          <span class="codigo">I52</span>
+          <span class="badge badge-ok">VERIFICADO</span>
+        </div>
+        <div class="archivo">growth_ops/evaluacion_proveedores_ia.json</div>
+        <div class="meta">Responsable: Growth &middot; Prueba funcional OK</div>
+      </div>
+      <div class="item">
+        <div class="item-top">
+          <span class="codigo">V18</span>
+          <span class="badge badge-ok">VERIFICADO</span>
+        </div>
+        <div class="archivo">growth_ops/dossier_go_curador.md</div>
+        <div class="meta">Responsable: Growth &middot; N/A (documento)</div>
+      </div>
+      </div>
+    </section>
+
+      </div>
+      <div class="panel" id="doc-governance-01principioseticoscolombia"><div class="doc-meta">Gobernanza &middot; <code>governance/01_principios_eticos_colombia.md</code></div><article class="doc-content"><h1 id="principios-ticos-para-el-uso-de-ia-g39">Principios Éticos para el Uso de IA (G39)</h1>
+<p><strong>Empresa:</strong> COMUNICACIONES INTEGRADAS LA RED 360 S.A.S. ("Tango") <strong>Vigencia del plan de cumplimiento:</strong> 2026-09-30 <strong>Marco de referencia:</strong> Guías de la Superintendencia de Industria y Comercio (SIC) sobre IA, Ley 1581 de 2012 (Habeas Data), Constitución Política de Colombia Art. 15, Código Sustantivo del Trabajo (CST).</p>
+<h2 id="1-transparencia">1. Transparencia</h2>
+<p>La transparencia es la obligación de hacer visible, para clientes, empleados y titulares de datos, cuándo y cómo interviene la IA en un proceso que los afecta.</p>
+<ul><li><strong>Frente a clientes:</strong> toda propuesta comercial, contrato o entregable que involucre IA generativa como parte sustancial del proceso de producción debe declararlo expresamente en la propuesta o en el brief de entrega. No se oculta el uso de IA como si fuera trabajo íntegramente manual cuando el cliente lo pregunte o cuando sea material para su decisión de compra.</li><li><strong>Frente a empleados:</strong> cuando se use IA en procesos de gestión de talento (evaluación de desempeño, selección de personal, priorización de tareas), el empleado afectado debe conocer que dicha herramienta participa en el proceso y tener la posibilidad de solicitar una revisión humana del resultado.</li><li><strong>Mecanismo:</strong> el Director de IA mantiene un registro público interno (accesible a todo el personal) de qué herramientas de IA están aprobadas y en qué procesos de negocio se usan activamente, alimentado por el <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-05procedimientoaprobacionr6'); return false;">Procedimiento R6</a>.</li></ul>
+<h2 id="2-explicabilidad">2. Explicabilidad</h2>
+<p>Ninguna decisión o entregable asistido por IA se considera válido si nadie en la organización puede explicarlo en lenguaje no técnico.</p>
+<ul><li>Antes de entregar a un cliente un resultado generado o asistido por IA (análisis de datos, segmentación, recomendaciones de medios, piezas creativas), el responsable del proyecto debe poder responder: (1) qué herramienta se usó, (2) qué datos de entrada procesó, (3) qué criterio o instrucción (prompt/parámetros) guio el resultado, y (4) qué ajustes humanos se hicieron antes de la entrega.</li><li>Los equipos documentan el propósito de cada herramienta de IA usada en un proyecto en la bitácora de proyecto, incluyendo versión del modelo cuando sea relevante para el resultado (p. ej. cambios de modelo que alteren scoring o segmentación).</li><li>Cuando un resultado de IA no pueda explicarse con este nivel de detalle, no se entrega al cliente sin antes pasar por revisión y ajuste humano adicional.</li></ul>
+<h2 id="3-responsabilidad-humana-human-in-the-loop">3. Responsabilidad Humana (Human-in-the-loop)</h2>
+<ul><li>Ninguna decisión con efectos legales, económicos, laborales o reputacionales significativos se toma exclusivamente por un sistema de IA. Debe existir un punto de revisión humana antes de la ejecución, con autoridad real para modificar o descartar el resultado de la IA.</li><li>El humano responsable de cada punto de control se identifica por nombre y rol en la documentación del proyecto (no basta con "el equipo revisó"); esa persona asume la responsabilidad del entregable final, en los mismos términos que si lo hubiera producido sin asistencia de IA.</li><li>Los procesos que afectan directamente a personas naturales —selección de personal, evaluación de desempeño, contactabilidad masiva de clientes finales (ver <a href="#" class="doc-link" onclick="mostrarDoc('doc-growthops-dossiergocurador'); return false;">Dossier GO CURADOR V18</a>)— requieren doble validación humana: quien ejecuta y quien aprueba, en roles distintos.</li><li>El incumplimiento de este principio por un colaborador se gestiona conforme al procedimiento disciplinario del Reglamento Interno de Trabajo de la empresa (Capítulo XV, Artículo 34 y siguientes), sin perjuicio de lo establecido en la <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-03politicasusoresponsableia'); return false;">Política de Uso Responsable de IA (G43)</a>.</li></ul>
+<h2 id="4-no-discriminacin-algortmica">4. No Discriminación Algorítmica</h2>
+<ul><li>Prohibido usar IA para segmentar, calificar, priorizar o excluir personas (clientes, candidatos, empleados) con base en variables sensibles: raza, género, orientación sexual, religión, discapacidad, afiliación política, origen étnico o situación de embarazo/lactancia (esta última con protección reforzada conforme al Artículo 30 del Reglamento Interno de Trabajo de la empresa), salvo que exista una base legal explícita, documentada y validada por el Comité de Gobernanza.</li><li>Cualquier modelo o herramienta que produzca scoring o priorización de personas debe auditarse antes de su puesta en producción y luego de forma semestral, para detectar sesgos indirectos (proxies de variables sensibles, como código postal correlacionado con estrato o nombre correlacionado con género/etnia). Los criterios de esta auditoría se alinean con la <a href="../growth_ops/evaluacion_proveedores_ia.json" target="_blank" rel="noopener">matriz de evaluación de proveedores I52</a>.</li><li>Toda auditoría de sesgo, sus hallazgos y las medidas correctivas adoptadas se documentan y se reportan al Comité de Gobernanza en su reunión ordinaria siguiente.</li></ul>
+<h2 id="5-responsabilidad-y-trazabilidad">5. Responsabilidad y Trazabilidad</h2>
+<ul><li>Toda herramienta de IA usada en la operación debe estar registrada y aprobada según el <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-05procedimientoaprobacionr6'); return false;">Procedimiento R6</a>.</li><li>Se conserva evidencia (logs, versiones de prompts, aprobaciones, nombre del responsable humano) de los usos de IA en proyectos con clientes por un mínimo de dos (2) años, en línea con los plazos de conservación documental usuales en materia laboral y contractual.</li><li>El Comité de Gobernanza (ver <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-04estatutocomitegobernanza'); return false;">Estatuto G44</a>) es responsable de vigilar el cumplimiento de estos cinco principios y de resolver excepciones, dejando constancia escrita de toda decisión.</li></ul>
+<hr>
+<p>*Documento controlado — Comité de Gobernanza de IA. Cualquier modificación requiere aprobación de Dirección Ejecutiva.*</p></article></div>
+<div class="panel" id="doc-governance-02procesoscumplimientosic"><div class="doc-meta">Gobernanza &middot; <code>governance/02_procesos_cumplimiento_sic.md</code></div><article class="doc-content"><h1 id="proceso-de-cumplimiento-legal-en-proyectos-con-clientes-g40">Proceso de Cumplimiento Legal en Proyectos con Clientes (G40)</h1>
+<p><strong>Empresa:</strong> COMUNICACIONES INTEGRADAS LA RED 360 S.A.S. ("Tango") <strong>Vigencia del plan de cumplimiento:</strong> 2026-09-30 <strong>Marco de referencia:</strong> Ley 1581 de 2012 (Habeas Data), Decreto 1377 de 2013, Guías SIC sobre tratamiento de datos e IA, Ley 23 de 1982 (Derechos de Autor).</p>
+<h2 id="1-protocolo-previo-al-inicio-de-proyecto">1. Protocolo previo al inicio de proyecto</h2>
+<ol><li>Identificar si el proyecto implica tratamiento de datos personales de terceros (bases de datos de clientes del cliente, listas de contactabilidad, formularios de leads, etc.).</li><li>Si aplica tratamiento de datos personales, verificar:</li></ol>
+<ul><li>Existencia de autorización previa del titular por parte del cliente contratante.</li><li>Necesidad de registro de la base de datos ante el Registro Nacional de Bases de Datos (RNBD) de la SIC, cuando el cliente sea responsable del tratamiento y supere los umbrales legales, o cuando la agencia actúe como encargada y reciba bases para operar campañas.</li><li>Firma de un Acuerdo de Encargo de Tratamiento de Datos cuando la agencia procese datos personales por cuenta del cliente.</li></ul>
+<ol><li>Dejar constancia escrita (correo o cláusula contractual) de quién es el Responsable y quién el Encargado del tratamiento en el proyecto.</li></ol>
+<h2 id="2-protocolo-de-propiedad-intelectual-sobre-entregables-generados-con-ia">2. Protocolo de Propiedad Intelectual sobre entregables generados con IA</h2>
+<p>Todo contrato o propuesta que involucre entregables producidos total o parcialmente con IA generativa debe seguir este protocolo antes de la firma:</p>
+<h3 id="21-titularidad-de-los-outputs">2.1 Titularidad de los outputs</h3>
+<ul><li>Los derechos patrimoniales sobre los entregables finales (copys, piezas gráficas, análisis, reportes, guiones) <strong>editados, curados y aprobados</strong> por el equipo humano se ceden al cliente conforme a los términos comerciales pactados, con independencia de que hayan sido asistidos por una herramienta de IA en su generación.</li><li>Se aclara contractualmente que la cesión aplica al <strong>entregable final revisado</strong>, no al output crudo de la herramienta de IA como tal, evitando reclamos sobre versiones intermedias no aprobadas.</li><li>La agencia conserva, salvo pacto distinto, el derecho a reutilizar metodologías, plantillas de prompts y procesos genéricos (no el contenido específico del cliente) en proyectos de otros clientes.</li></ul>
+<h3 id="22-exclusin-de-garanta-de-originalidad-absoluta">2.2 Exclusión de garantía de originalidad absoluta</h3>
+<ul><li>Cláusula que informa al cliente que el contenido generado con asistencia de IA puede requerir una verificación adicional de originalidad/plagio antes de su publicación pública, y que la responsabilidad de esa verificación final (especialmente para piezas de alto alcance mediático) se define expresamente en el contrato.</li><li>Se recomienda pasar por herramientas de detección de similitud todo entregable de alto riesgo reputacional antes de publicación masiva.</li></ul>
+<h3 id="23-no-uso-de-datos-del-cliente-para-entrenamiento-de-terceros">2.3 No uso de datos del cliente para entrenamiento de terceros</h3>
+<ul><li>Cláusula que garantiza que la información confidencial del cliente (estrategias, cifras, bases de datos, briefs no públicos) no se usa para entrenar o mejorar modelos de terceros, en línea con la <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-03politicasusoresponsableia'); return false;">Política de Uso Responsable (G43)</a>.</li><li>Solo se permite el uso de herramientas de IA con acuerdo empresarial de protección de datos vigente (ver <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-05procedimientoaprobacionr6'); return false;">Procedimiento R6</a>) para procesar información confidencial de clientes.</li></ul>
+<h3 id="24-indemnidad-y-lmite-de-responsabilidad">2.4 Indemnidad y límite de responsabilidad</h3>
+<ul><li>Cláusula de indemnidad que delimita la responsabilidad de la agencia ante reclamos de terceros por infracción de derechos de autor en contenido generado por IA, condicionada a que el cliente haya sido informado del uso de IA conforme al principio de Transparencia (<a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-01principioseticoscolombia'); return false;">G39</a>).</li></ul>
+<h2 id="3-clusulas-de-confidencialidad-para-contratos-con-clientes">3. Cláusulas de confidencialidad para contratos con clientes</h2>
+<p>Todo contrato de prestación de servicios debe incluir, como mínimo:</p>
+<ol><li><strong>Definición de Información Confidencial:</strong> briefs, cifras de negocio, bases de datos, estrategias no públicas, credenciales de acceso a plataformas del cliente, y cualquier información marcada como confidencial.</li><li><strong>Obligación de no divulgación:</strong> prohibición de compartir Información Confidencial con terceros no autorizados, incluyendo su ingreso a herramientas de IA públicas no aprobadas (remisión directa a <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-03politicasusoresponsableia'); return false;">G43</a>).</li><li><strong>Duración:</strong> la obligación de confidencialidad sobrevive a la terminación del contrato por un término mínimo de dos (2) años.</li><li><strong>Devolución o destrucción de información:</strong> al finalizar el proyecto, la agencia devuelve o destruye de forma verificable la información confidencial del cliente que no deba conservar por obligación legal o contractual.</li><li><strong>Responsables internos:</strong> identificación de las personas del equipo con acceso a la Información Confidencial, limitando el acceso a quienes lo requieran para ejecutar el proyecto.</li></ol>
+<h2 id="4-registro-de-bases-de-datos-rnbd">4. Registro de bases de datos (RNBD)</h2>
+<p>Checklist previo a campañas de contactabilidad:</p>
+<ul><li class="checklist"><input type="checkbox" disabled > ¿La base de datos supera los 100.000 titulares o pertenece a una entidad obligada a registrar? Verificar con el cliente.</li><li class="checklist"><input type="checkbox" disabled > ¿Existe autorización expresa e informada del titular para el fin específico de la campaña?</li><li class="checklist"><input type="checkbox" disabled > ¿La base incluye datos sensibles (salud, menores de edad, datos biométricos)? Si es así, se requiere autorización expresa y reforzada.</li><li class="checklist"><input type="checkbox" disabled > ¿Se aplican los límites de horario y frecuencia de la Ley 2300 de 2023? (ver <a href="#" class="doc-link" onclick="mostrarDoc('doc-growthops-dossiergocurador'); return false;">Dossier GO CURADOR V18</a>).</li></ul>
+<h2 id="5-escalamiento">5. Escalamiento</h2>
+<p>Cualquier duda sobre el estatus legal de una base de datos, una cláusula contractual o el uso de IA en un proyecto se escala al Comité de Gobernanza antes de iniciar la ejecución, siguiendo el protocolo de decisiones del <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-04estatutocomitegobernanza'); return false;">Estatuto G44</a>.</p>
+<hr>
+<p>*Documento controlado — Comité de Gobernanza de IA.*</p></article></div>
+<div class="panel" id="doc-governance-03politicasusoresponsableia"><div class="doc-meta">Gobernanza &middot; <code>governance/03_politicas_uso_responsable_ia.md</code></div><article class="doc-content"><h1 id="poltica-interna-de-uso-responsable-de-ia-generativa-g43">Política Interna de Uso Responsable de IA Generativa (G43)</h1>
+<p><strong>Empresa:</strong> COMUNICACIONES INTEGRADAS LA RED 360 S.A.S. ("Tango") <strong>Vigencia del plan de cumplimiento:</strong> 2026-09-30 <strong>Aplica a:</strong> todo el personal, contratistas y freelancers que usen herramientas de IA generativa en labores para la organización. <strong>Fundamento disciplinario:</strong> esta política se integra como norma especial al Reglamento Interno de Trabajo de la empresa (RIT, vigente desde el 21 de junio de 2026), en particular sus Capítulos XIV (Obligaciones y Prohibiciones) y XV (Escala de Faltas y Sanciones Disciplinarias), conforme al Artículo 33 del RIT que faculta a la empresa a fijar obligaciones especiales adicionales a las del Código Sustantivo del Trabajo.</p>
+<h2 id="1-objetivo">1. Objetivo</h2>
+<p>Establecer reglas de uso seguro de herramientas de IA generativa (ChatGPT, Claude, Gemini, Copilot, y similares) para prevenir fuga de información confidencial y mitigar el riesgo de "Shadow AI" (herramientas no aprobadas usadas sin control).</p>
+<h2 id="2-prohibicin-expresa-de-ingreso-de-datos-confidenciales-o-sensibles">2. Prohibición expresa de ingreso de datos confidenciales o sensibles</h2>
+<p>Está terminantemente <strong>prohibido</strong> ingresar en modelos de IA públicos o de acceso general (versiones gratuitas o sin acuerdo empresarial de datos) lo siguiente:</p>
+<ul><li>Datos personales identificables de clientes finales o titulares (nombres, cédulas, teléfonos, correos, direcciones).</li><li>Bases de datos completas o extractos de bases de contactabilidad.</li><li>Información financiera, estratégica o contractual confidencial de clientes (presupuestos, KPIs no publicados, contratos).</li><li>Credenciales, tokens de API, contraseñas o accesos a sistemas propios o de clientes.</li><li>Información de identificación de empleados (salarios, evaluaciones de desempeño, datos de salud, procesos disciplinarios).</li></ul>
+<p>Cuando se requiera usar IA sobre este tipo de información, debe emplearse únicamente una herramienta aprobada con acuerdo empresarial de protección de datos (donde el proveedor garantice contractualmente no usar los datos para entrenamiento) y con aprobación previa según el <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-05procedimientoaprobacionr6'); return false;">Procedimiento R6</a>.</p>
+<p>Esta prohibición <strong>complementa, no sustituye</strong>, las prohibiciones generales ya vigentes en el Artículo 33-B del RIT relativas al manejo de información y equipos de cómputo, entre ellas:</p>
+<ul><li>No copiar información de los computadores de la empresa mediante dispositivos externos sin autorización.</li><li>No instalar en los equipos de la empresa software sin la debida licencia.</li><li>No divulgar a personas no autorizadas las claves de acceso a los sistemas de cómputo de la empresa.</li></ul>
+<h2 id="3-herramientas-aprobadas-vs-no-aprobadas">3. Herramientas aprobadas vs. no aprobadas</h2>
+<ul><li><strong>Aprobadas por defecto:</strong> herramientas incluidas en el listado vigente que administra el Comité de Gobernanza, con acuerdo de procesamiento de datos vigente.</li><li><strong>No aprobadas:</strong> cualquier herramienta nueva (extensiones de navegador, apps, plugins, GPTs de terceros) requiere pasar por el flujo R6 antes de usarse en trabajo con datos de clientes o de la empresa.</li></ul>
+<h2 id="4-buenas-prcticas-obligatorias">4. Buenas prácticas obligatorias</h2>
+<ol><li>Anonimizar o seudonimizar datos antes de usarlos como input en IA cuando sea técnicamente posible.</li><li>Revisar y editar siempre el output de IA antes de enviarlo a un cliente; ningún resultado se entrega "tal cual" sin revisión humana, conforme al principio de Responsabilidad Humana del <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-01principioseticoscolombia'); return false;">G39</a>.</li><li>No usar IA para tomar decisiones finales sobre personas (contratación, despido, calificación de desempeño) sin supervisión humana directa.</li><li>Reportar de inmediato al Director de IA cualquier incidente de fuga de información a través de una herramienta de IA, sin temor a represalia por el reporte oportuno.</li></ol>
+<h2 id="5-sanciones-por-incumplimiento">5. Sanciones por incumplimiento</h2>
+<p>El incumplimiento de esta política constituye una infracción a las obligaciones y prohibiciones especiales del trabajador y se sanciona conforme a la escala disciplinaria establecida en el Capítulo XV del Reglamento Interno de Trabajo de la empresa:</p>
+<div class="table-wrap"><table><thead><tr><th>Situación</th><th>Sanción conforme al RIT</th></tr></thead><tbody><tr><td>Primera infracción a esta política (p. ej. ingreso accidental de datos no sensibles en herramienta no aprobada, sin daño material)</td><td>Llamado de atención, escalando a suspensión en el trabajo según la gravedad, conforme al Artículo 35 del RIT</td></tr><tr><td>Incumplimiento de obligaciones contractuales o reglamentarias relacionadas con IA (primera vez)</td><td>Suspensión en el trabajo hasta por ocho (8) días, conforme al Artículo 34 del RIT</td></tr><tr><td>Reincidencia (segunda vez en adelante)</td><td>Suspensión en el trabajo hasta por dos (2) meses, conforme al Artículo 34 del RIT</td></tr><tr><td>Fuga de información confidencial o datos personales de clientes por uso indebido de IA con daño comprobado</td><td>Investigación disciplinaria formal; puede constituir justa causa de terminación del contrato conforme al CST, sin perjuicio de las acciones legales civiles o penales a que haya lugar por violación de la Ley 1581 de 2012</td></tr></tbody></table></div>
+<h3 id="51-debido-proceso">5.1 Debido proceso</h3>
+<p>Ninguna sanción se impone sin agotar el procedimiento previsto en el Artículo 34 del RIT: el trabajador debe ser citado y escuchado, puede comparecer acompañado de dos (2) compañeros de trabajo, y de todo el proceso se deja constancia escrita de los hechos y de la decisión final. La facultad de imponer sanciones reside en la Gerencia y las Direcciones de área (Artículo 28 del RIT), quienes reciben el reporte de incidentes del Director de IA para iniciar el proceso.</p>
+<h3 id="52-canal-de-reporte-no-punitivo">5.2 Canal de reporte no punitivo</h3>
+<p>El reporte voluntario y oportuno de un error o incidente propio (antes de que genere daño o de que sea detectado por terceros) se considera atenuante en la valoración disciplinaria, para incentivar la transparencia sobre el uso incorrecto de estas herramientas.</p>
+<h2 id="6-relacin-con-el-comit-de-convivencia-laboral">6. Relación con el Comité de Convivencia Laboral</h2>
+<p>Cuando el uso de IA se relacione con una situación de acoso laboral o discriminación hacia un compañero (por ejemplo, uso de IA para generar contenido ofensivo sobre un colaborador), el caso se remite al Comité de Convivencia Laboral de la empresa (Capítulo XVIII del RIT, en desarrollo de la Ley 1010 de 2006), sin perjuicio del trámite disciplinario que corresponda por el uso indebido de la herramienta.</p>
+<hr>
+<p>*Documento controlado — Comité de Gobernanza de IA. Revisión anual obligatoria.*</p></article></div>
+<div class="panel" id="doc-governance-04estatutocomitegobernanza"><div class="doc-meta">Gobernanza &middot; <code>governance/04_estatuto_comite_gobernanza.md</code></div><article class="doc-content"><h1 id="estatuto-del-comit-de-gobernanza-de-ia-g44">Estatuto del Comité de Gobernanza de IA (G44)</h1>
+<p><strong>Empresa:</strong> COMUNICACIONES INTEGRADAS LA RED 360 S.A.S. ("Tango") <strong>Vigencia del plan de cumplimiento:</strong> 2026-09-30</p>
+<h2 id="1-propsito">1. Propósito</h2>
+<p>El Comité de Gobernanza de IA es el órgano responsable de supervisar la adopción ética, legal y estratégica de la inteligencia artificial en la organización, y de resolver excepciones a las políticas definidas en este Kit.</p>
+<h2 id="2-composicin-y-funciones-de-cada-miembro">2. Composición y funciones de cada miembro</h2>
+<div class="table-wrap"><table><thead><tr><th>Rol</th><th>Funciones específicas</th></tr></thead><tbody><tr><td>**Directora Ejecutiva** (preside)</td><td>Convoca y preside las sesiones; aprueba políticas nuevas o modificadas; decide en última instancia sobre riesgos legales, reputacionales o presupuestales relevantes; representa al Comité ante terceros (clientes, autoridades) cuando se requiera.</td></tr><tr><td>**Growth**</td><td>Vigila el cumplimiento de la Ley 2300 de 2023 en campañas de contactabilidad; valida el uso de datos de clientes en iniciativas de crecimiento y producto (p. ej. GO CURADOR); aporta la visión comercial en la evaluación de nuevas herramientas de IA (impacto en propuesta de valor y costos).</td></tr><tr><td>**Director de IA**</td><td>Responsable técnico: administra el registro de herramientas aprobadas (R6); evalúa proveedores de IA con la [matriz I52](../growth_ops/evaluacion_proveedores_ia.json); coordina auditorías de sesgo y seguridad; reporta hallazgos e incidentes al Comité; mantiene actualizado el inventario de herramientas en uso.</td></tr></tbody></table></div>
+<h2 id="3-periodicidad-de-reuniones">3. Periodicidad de reuniones</h2>
+<ul><li><strong>Ordinaria:</strong> el Comité se reúne una vez al mes, en una fecha fija acordada al inicio de cada trimestre.</li><li><strong>Extraordinaria:</strong> se convoca sin necesidad de esperar a la reunión ordinaria cuando se reporte un incidente crítico (fuga de datos, sesgo algorítmico detectado, incumplimiento normativo, solicitud urgente de aprobación R6 que bloquee un proyecto de cliente).</li><li>Cada reunión ordinaria revisa como mínimo: (1) nuevas herramientas solicitadas vía R6, (2) incidentes reportados desde la última reunión, (3) estado de avance de los 12 entregables del Kit de Gobernanza (verificable con <code>run.bat audit_framework.py</code>), (4) pendientes del Plan de Gestión del Cambio (P30).</li></ul>
+<h2 id="4-protocolo-de-decisiones">4. Protocolo de decisiones</h2>
+<ol><li>Cualquier miembro del Comité, o cualquier colaborador a través de su líder, puede escalar un tema al Comité mediante solicitud escrita (correo o ticket interno).</li><li>Las decisiones se toman por <strong>consenso</strong> entre los tres miembros; si no hay consenso, decide la Directora Ejecutiva, dejando constancia escrita de la posición de cada miembro.</li><li>Toda decisión relevante (aprobación/rechazo de herramienta, excepción a política, plan de remediación) se documenta en un acta firmada por los asistentes y se conserva por un mínimo de dos (2) años.</li><li>Las decisiones que impliquen riesgo legal (tratamiento de datos personales, contactabilidad masiva, cláusulas contractuales) requieren la validación explícita de Growth y, cuando el riesgo lo amerite, consulta legal externa antes de cerrarse.</li><li>Las decisiones que impliquen riesgo laboral (cambios de funciones derivados de IA, procesos disciplinarios por uso indebido) se coordinan con Talento Humano y respetan el debido proceso establecido en el Reglamento Interno de Trabajo de la empresa.</li></ol>
+<h2 id="5-relacin-con-otros-documentos-del-kit">5. Relación con otros documentos del Kit</h2>
+<ul><li>Aprueba y actualiza los <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-01principioseticoscolombia'); return false;">Principios Éticos (G39)</a> y la <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-03politicasusoresponsableia'); return false;">Política de Uso Responsable (G43)</a>.</li><li>Es la instancia final del <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-05procedimientoaprobacionr6'); return false;">Procedimiento de Aprobación R6</a> para casos escalados.</li><li>Supervisa la ejecución del <a href="#" class="doc-link" onclick="mostrarDoc('doc-culturepeople-02plangestioncambio'); return false;">Plan de Gestión del Cambio (P30)</a> y del <a href="#" class="doc-link" onclick="mostrarDoc('doc-culturepeople-01planfuerzalaboralcst'); return false;">Plan de Fuerza Laboral (P29)</a>.</li><li>Valida el cumplimiento de contactabilidad del <a href="#" class="doc-link" onclick="mostrarDoc('doc-growthops-dossiergocurador'); return false;">Dossier GO CURADOR (V18)</a>.</li></ul>
+<hr>
+<p>*Documento controlado — Comité de Gobernanza de IA.*</p></article></div>
+<div class="panel" id="doc-governance-05procedimientoaprobacionr6"><div class="doc-meta">Gobernanza &middot; <code>governance/05_procedimiento_aprobacion_r6.md</code></div><article class="doc-content"><h1 id="procedimiento-de-aprobacin-de-herramientas-de-ia-de-terceros-r6">Procedimiento de Aprobación de Herramientas de IA de Terceros (R6)</h1>
+<p><strong>Empresa:</strong> COMUNICACIONES INTEGRADAS LA RED 360 S.A.S. ("Tango") <strong>Vigencia del plan de cumplimiento:</strong> 2026-09-30 <strong>Objetivo:</strong> mitigar el riesgo de "Shadow AI" — software o herramientas de IA de terceros adoptadas sin dueño formal ni validación legal/de seguridad.</p>
+<h2 id="1-cundo-aplica-este-procedimiento">1. Cuándo aplica este procedimiento</h2>
+<p>Cualquier colaborador que quiera adoptar, para uso propio o de equipo, una herramienta de IA (SaaS, plugin, extensión, GPT personalizado, API) que <strong>no esté en el listado de herramientas aprobadas</strong>, debe seguir este flujo antes de usarla con información de la empresa o de clientes.</p>
+<h2 id="2-formulario-tipo-de-solicitud">2. Formulario tipo de solicitud</h2>
+<p>Todo colaborador que solicite una herramienta nueva diligencia los siguientes campos (formato digital, conservado por el Director de IA):</p>
+<pre><code>FORMULARIO DE SOLICITUD DE HERRAMIENTA DE IA (R6)
+--------------------------------------------------
+1. Nombre del solicitante y área:
+2. Nombre de la herramienta y proveedor:
+3. URL / enlace oficial del proveedor:
+4. Propósito de uso (tarea concreta que resuelve):
+5. Tipo de datos que procesaría:
+   [ ] Ninguno (solo texto genérico, sin datos de clientes/empleados)
+   [ ] Datos internos no confidenciales
+   [ ] Datos confidenciales de la empresa (estrategia, cifras)
+   [ ] Datos personales de clientes finales
+   [ ] Datos sensibles (salud, menores, biométricos)
+6. ¿El proveedor ofrece acuerdo empresarial de no uso de datos para entrenamiento? (Sí/No/No sabe)
+7. Costo estimado (mensual/anual) y modalidad de pago:
+8. Duración estimada de uso (piloto / permanente):
+9. Dueño formal propuesto (responsable interno de la herramienta):</code></pre>
+<h2 id="3-flujo-de-validacin">3. Flujo de validación</h2>
+<ol><li><strong>Solicitud:</strong> el colaborador diligencia el formulario anterior y lo envía al Director de IA.</li><li><strong>Revisión técnica (Director de IA):</strong> verifica, con base en la <a href="../growth_ops/evaluacion_proveedores_ia.json" target="_blank" rel="noopener">matriz de criterios I52</a> —SLA, residencia de datos, cumplimiento de Ley 1581, seguridad de la información—, si el proveedor cumple los mínimos aceptables. Se descarta de plano cualquier herramienta que no ofrezca política de no uso de datos para entrenamiento cuando se solicite para datos confidenciales.</li><li><strong>Revisión legal (referencia <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-02procesoscumplimientosic'); return false;">G40</a>):</strong> determina si la herramienta requiere Acuerdo de Encargo de Tratamiento de Datos o cláusula contractual adicional con el proveedor.</li><li><strong>Decisión:</strong></li></ol>
+<ul><li><strong>Aprobación directa</strong> (Director de IA) si el campo 5 del formulario indica "Ninguno" o "Datos internos no confidenciales" y el costo es menor a un umbral menor definido por el Comité.</li><li><strong>Escalamiento al Comité de Gobernanza</strong> si procesa datos personales, datos sensibles, o representa un gasto recurrente relevante, siguiendo el <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-04estatutocomitegobernanza'); return false;">protocolo de decisiones del Estatuto G44</a>.</li></ul>
+<ol><li><strong>Registro:</strong> toda herramienta aprobada se añade al <strong>Listado de Herramientas Aprobadas</strong> con: nombre, dueño formal, fecha de aprobación, alcance de uso permitido y fecha de próxima revisión (máximo 12 meses después).</li><li><strong>Comunicación:</strong> el solicitante recibe respuesta por escrito (aprobada, aprobada con condiciones, o rechazada con motivo) en un plazo máximo de diez (10) días hábiles.</li></ol>
+<h2 id="4-criterios-de-evaluacin-resumen">4. Criterios de evaluación (resumen)</h2>
+<div class="table-wrap"><table><thead><tr><th>Criterio</th><th>Peso orientativo</th><th>Elimina si falla</th></tr></thead><tbody><tr><td>Cumplimiento Ley 1581 / no uso de datos para entrenamiento</td><td>Alto</td><td>Sí, cuando procesa datos personales o confidenciales</td></tr><tr><td>Seguridad de la información (cifrado, certificaciones)</td><td>Alto</td><td>No, pero condiciona aprobación</td></tr><tr><td>Residencia de datos</td><td>Medio</td><td>No</td></tr><tr><td>SLA y soporte</td><td>Medio</td><td>No</td></tr><tr><td>Costo</td><td>Bajo-Medio</td><td>No</td></tr></tbody></table></div>
+<p>Estos criterios son consistentes con los definidos en la <a href="../growth_ops/evaluacion_proveedores_ia.json" target="_blank" rel="noopener">matriz de evaluación de proveedores (I52)</a>, usada también para proveedores de IA a nivel de producto (no solo herramientas internas).</p>
+<h2 id="5-dueo-formal-obligatorio">5. Dueño formal obligatorio</h2>
+<p>Ninguna herramienta se mantiene activa sin un <strong>dueño formal</strong> (persona responsable de su uso correcto, renovación, y baja cuando ya no se use). Herramientas sin dueño formal identificado en la auditoría trimestral se desactivan.</p>
+<h2 id="6-auditora-peridica">6. Auditoría periódica</h2>
+<ul><li>Cada trimestre, el Director de IA audita el uso real de herramientas de IA en la organización (encuestas cortas a equipos, revisión de gastos en SaaS) para detectar herramientas no registradas (Shadow AI).</li><li>Los hallazgos se reportan al Comité de Gobernanza en la siguiente reunión ordinaria.</li></ul>
+<h2 id="7-consecuencias-de-uso-no-autorizado">7. Consecuencias de uso no autorizado</h2>
+<p>El uso de herramientas de IA no registradas con datos confidenciales o personales constituye una violación a la <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-03politicasusoresponsableia'); return false;">Política de Uso Responsable (G43)</a> y se sanciona conforme a la escala disciplinaria allí descrita, con fundamento en el Reglamento Interno de Trabajo de la empresa.</p>
+<hr>
+<p>*Documento controlado — Comité de Gobernanza de IA.*</p></article></div>
+<div class="panel" id="doc-culturepeople-01planfuerzalaboralcst"><div class="doc-meta">Personas y Cultura &middot; <code>culture_people/01_plan_fuerza_laboral_cst.md</code></div><article class="doc-content"><h1 id="plan-de-fuerza-laboral-upskilling-y-reskilling-ante-la-ia-p29">Plan de Fuerza Laboral: Upskilling y Reskilling ante la IA (P29)</h1>
+<p><strong>Empresa:</strong> COMUNICACIONES INTEGRADAS LA RED 360 S.A.S. ("Tango") <strong>Vigencia del plan de cumplimiento:</strong> 2026-09-30 <strong>Marco de referencia:</strong> Código Sustantivo del Trabajo (CST), Ley 2466 de 2025 (reforma laboral) y el Reglamento Interno de Trabajo vigente de la empresa (RIT, junio de 2026), sin perjuicio de los derechos adquiridos de los trabajadores.</p>
+<h2 id="1-principio-rector">1. Principio rector</h2>
+<p>La adopción de IA en la organización se orienta a la <strong>complementación de capacidades humanas</strong>, no a la sustitución arbitraria de personal. Cualquier cambio en puestos de trabajo derivado de IA debe respetar los derechos laborales consagrados en el CST y en el RIT de la empresa (estabilidad, debido proceso, causales justas de terminación, garantías de la reforma laboral vigente).</p>
+<h2 id="2-anlisis-de-puestos-expuestos-a-ia">2. Análisis de puestos expuestos a IA</h2>
+<p>Clasificación de roles según nivel de exposición a automatización/asistencia por IA:</p>
+<div class="table-wrap"><table><thead><tr><th>Nivel</th><th>Descripción</th><th>Ejemplos de roles</th></tr></thead><tbody><tr><td>**Alto**</td><td>Tareas repetitivas y estructuradas, alta asistencia posible de IA</td><td>Redacción de reportes básicos, transcripción, primer borrador de copy</td></tr><tr><td>**Medio**</td><td>Requiere criterio humano combinado con herramientas de IA</td><td>Estrategia de contenido, análisis de datos, diseño creativo</td></tr><tr><td>**Bajo**</td><td>Requiere juicio, relación humana o creatividad no sustituible</td><td>Dirección de cuenta, negociación con clientes, liderazgo de equipo</td></tr></tbody></table></div>
+<h2 id="3-plan-de-upskilling-habilidades-nuevas">3. Plan de Upskilling (habilidades nuevas)</h2>
+<ul><li>Capacitación trimestral obligatoria en herramientas de IA aprobadas (prompt engineering aplicado, uso ético, límites de la <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-03politicasusoresponsableia'); return false;">Política G43</a>).</li><li>Rutas de aprendizaje diferenciadas por área (Creativo, Cuentas, Growth, Producto/Tech), coordinadas con el cronograma del <a href="#" class="doc-link" onclick="mostrarDoc('doc-culturepeople-02plangestioncambio'); return false;">Plan de Gestión del Cambio (P30)</a>.</li><li>Las horas de formación se registran como tiempo laborado cuando se dicten dentro de la jornada ordinaria de 42 horas semanales establecida en el Artículo 4 del RIT; si se programan fuera de dicha jornada, se ofrecen en modalidad voluntaria y compensada según lo acordado con el jefe inmediato.</li></ul>
+<h2 id="4-plan-de-reskilling-roles-de-alto-impacto">4. Plan de Reskilling (roles de alto impacto)</h2>
+<p>Para roles clasificados en nivel <strong>Alto</strong> de exposición:</p>
+<ol><li>Identificación temprana (mínimo 6 meses de anticipación) de la posible reconfiguración del puesto, a cargo del líder de área y Talento Humano.</li><li>Oferta formal de reentrenamiento hacia roles de supervisión de IA, control de calidad o especialización creativa/estratégica, priorizando la reubicación interna sobre la desvinculación.</li><li>Ningún cambio de funciones sustancial se implementa sin comunicación previa y por escrito al trabajador, agotando el debido proceso: derecho del trabajador a ser escuchado, posibilidad de asistencia de dos (2) compañeros de trabajo y constancia escrita de la decisión, en los mismos términos de garantía procesal que el RIT exige para procesos disciplinarios (Artículo 34).</li><li>En caso de que el cambio de funciones no sea viable y se evalúe la terminación del vínculo por causas relacionadas con automatización, se aplican estrictamente las causales y procedimientos del CST; la sola existencia de una herramienta de IA capaz de ejecutar una tarea no constituye, por sí sola, justa causa de despido sin haber ofrecido primero la ruta de reskilling.</li></ol>
+<h2 id="5-garantas-laborales">5. Garantías laborales</h2>
+<ul><li>La adopción de IA no se usa como única causal de despido sin agotar el proceso de reskilling ofrecido.</li><li>Cualquier modificación sustancial de funciones se documenta mediante otrosí o comunicación formal, y se coordina con el área de Talento Humano y con el <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-04estatutocomitegobernanza'); return false;">Comité de Gobernanza (G44)</a>.</li><li>Se mantiene la protección reforzada del RIT para trabajadoras en estado de embarazo o lactancia (Artículo 30) frente a cualquier reasignación de funciones derivada de automatización.</li></ul>
+<h2 id="6-seguimiento">6. Seguimiento</h2>
+<p>El avance del plan se revisa semestralmente por Dirección Ejecutiva y Growth, y se articula con la <a href="#" class="doc-link" onclick="mostrarDoc('doc-culturepeople-03matrizrevisionroles'); return false;">Matriz de Revisión de Roles (P34)</a> y el <a href="#" class="doc-link" onclick="mostrarDoc('doc-culturepeople-02plangestioncambio'); return false;">Plan de Gestión del Cambio (P30)</a>.</p>
+<hr>
+<p>*Documento controlado — Talento Humano / Comité de Gobernanza de IA.*</p></article></div>
+<div class="panel" id="doc-culturepeople-02plangestioncambio"><div class="doc-meta">Personas y Cultura &middot; <code>culture_people/02_plan_gestion_cambio.md</code></div><article class="doc-content"><h1 id="plan-de-gestin-del-cambio-para-adopcin-de-ia-p30">Plan de Gestión del Cambio para Adopción de IA (P30)</h1>
+<p><strong>Empresa:</strong> COMUNICACIONES INTEGRADAS LA RED 360 S.A.S. ("Tango") <strong>Vigencia del plan de cumplimiento:</strong> 2026-09-30</p>
+<h2 id="1-objetivo">1. Objetivo</h2>
+<p>Facilitar la adopción de herramientas de IA en el día a día de la organización, mitigando resistencias naturales al cambio y asegurando formación adecuada, en coherencia con el <a href="#" class="doc-link" onclick="mostrarDoc('doc-culturepeople-01planfuerzalaboralcst'); return false;">Plan de Fuerza Laboral (P29)</a>.</p>
+<h2 id="2-matriz-de-adopcin-de-ia">2. Matriz de adopción de IA</h2>
+<p>Segmentación del personal según actitud y nivel de uso actual de IA:</p>
+<div class="table-wrap"><table><thead><tr><th>Segmento</th><th>Perfil</th><th>Estrategia de intervención</th></tr></thead><tbody><tr><td>**Promotores**</td><td>Ya usan IA activamente, con buenas prácticas</td><td>Convertirlos en mentores internos ("campeones de IA") que apoyan la formación entre pares</td></tr><tr><td>**Curiosos indecisos**</td><td>Interesados pero sin confianza o formación</td><td>Formación práctica guiada, casos de uso concretos por área</td></tr><tr><td>**Resistentes**</td><td>Perciben la IA como amenaza a su rol o calidad del trabajo</td><td>Comunicación transparente sobre el [Plan de Fuerza Laboral (P29)](01_plan_fuerza_laboral_cst.md), acompañamiento individual con Talento Humano</td></tr><tr><td>**No usuarios por desconocimiento**</td><td>No han tenido exposición</td><td>Sensibilización básica (ver [Kit de Campañas P35](04_kit_campanas_sensibilizacion.md))</td></tr></tbody></table></div>
+<h2 id="3-mitigacin-de-resistencias">3. Mitigación de resistencias</h2>
+<ol><li><strong>Comunicación honesta:</strong> explicar qué cambia, qué no cambia y por qué, evitando ambigüedad sobre el impacto laboral; toda comunicación sobre cambios de rol sigue el estándar de debido proceso descrito en P29.</li><li><strong>Participación temprana:</strong> involucrar a líderes de equipo en la selección de casos de uso de IA para su área, en vez de imponer herramientas top-down.</li><li><strong>Reconocimiento:</strong> visibilizar y premiar buenas prácticas de uso de IA que generen valor medible (tiempo ahorrado, calidad mejorada), destacadas en las reuniones de área.</li><li><strong>Canal de feedback:</strong> espacio permanente (encuesta corta mensual o buzón) para reportar frustraciones, errores de la IA o necesidades de formación no cubiertas, distinto y complementario al Comité de Convivencia Laboral del RIT (para casos que configuren acoso).</li></ol>
+<h2 id="4-cronograma-de-adopcin-ciclo-anual-4-trimestres">4. Cronograma de adopción (ciclo anual, 4 trimestres)</h2>
+<div class="table-wrap"><table><thead><tr><th>Trimestre</th><th>Actividad</th><th>Responsable</th></tr></thead><tbody><tr><td>**T1**</td><td>Diagnóstico de la matriz de adopción por área (encuesta corta); sensibilización general y comunicación de políticas (G39, G43) mediante el Kit P35</td><td>Talento Humano + Director de IA</td></tr><tr><td>**T2**</td><td>Formación práctica por área: herramientas aprobadas, casos de uso concretos, primeras métricas de adopción</td><td>Líderes de área + Director de IA</td></tr><tr><td>**T3**</td><td>Formación avanzada para "campeones de IA"; recolección y análisis del feedback recogido en T1-T2; ajustes a la matriz de adopción</td><td>Director de IA</td></tr><tr><td>**T4**</td><td>Evaluación de resultados del año, actualización de la matriz de adopción y planeación del cronograma del año siguiente; presentación de resultados al Comité de Gobernanza</td><td>Growth + Comité de Gobernanza</td></tr></tbody></table></div>
+<h2 id="5-indicadores-de-seguimiento">5. Indicadores de seguimiento</h2>
+<ul><li>% de colaboradores capacitados por trimestre (meta: 100% del personal expuesto a herramientas de IA aprobadas antes de cierre de T2).</li><li>% de colaboradores que reportan usar herramientas de IA aprobadas en la encuesta mensual.</li><li>Número de incidentes o quejas relacionadas con IA (uso indebido, desconfianza, errores), reportado al Comité de Gobernanza.</li><li>Número de "campeones de IA" activos por área.</li></ul>
+<h2 id="6-responsables">6. Responsables</h2>
+<p>Growth y Talento Humano coordinan la ejecución operativa; el Comité de Gobernanza revisa avances en sus reuniones ordinarias (ver <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-04estatutocomitegobernanza'); return false;">Estatuto G44</a>) y aprueba ajustes al cronograma cuando se requiera.</p>
+<hr>
+<p>*Documento controlado — Talento Humano / Comité de Gobernanza de IA.*</p></article></div>
+<div class="panel" id="doc-culturepeople-03matrizrevisionroles"><div class="doc-meta">Personas y Cultura &middot; <code>culture_people/03_matriz_revision_roles.md</code></div><article class="doc-content"><h1 id="matriz-de-revisin-peridica-de-roles-y-descripciones-de-cargo-p34">Matriz de Revisión Periódica de Roles y Descripciones de Cargo (P34)</h1>
+<p><strong>Empresa:</strong> COMUNICACIONES INTEGRADAS LA RED 360 S.A.S. ("Tango") <strong>Vigencia del plan de cumplimiento:</strong> 2026-09-30</p>
+<h2 id="1-objetivo">1. Objetivo</h2>
+<p>Establecer una metodología periódica para revisar y actualizar las descripciones de cargo, integrando explícitamente las habilidades de IA requeridas en cada rol, en coherencia con el <a href="#" class="doc-link" onclick="mostrarDoc('doc-culturepeople-01planfuerzalaboralcst'); return false;">Plan de Fuerza Laboral (P29)</a>.</p>
+<h2 id="2-periodicidad">2. Periodicidad</h2>
+<p>La revisión de cada descripción de cargo se realiza con periodicidad <strong>semestral</strong> (alineada al ciclo del <a href="#" class="doc-link" onclick="mostrarDoc('doc-culturepeople-02plangestioncambio'); return false;">cronograma de adopción del P30</a>), o de forma anticipada cuando se introduzca una nueva herramienta de IA que cambie sustancialmente las funciones de un rol.</p>
+<h2 id="3-metodologa-de-actualizacin">3. Metodología de actualización</h2>
+<ol><li><strong>Levantamiento (Talento Humano + líder de área):</strong> revisión de las tareas actuales del rol frente al inventario de herramientas de IA aprobadas (registro del <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-05procedimientoaprobacionr6'); return false;">Procedimiento R6</a>), identificando cuáles ya se apoyan o podrían apoyarse en IA.</li><li><strong>Clasificación de exposición:</strong> se ubica el rol en el nivel Alto / Medio / Bajo de exposición a IA definido en el <a href="#" class="doc-link" onclick="mostrarDoc('doc-culturepeople-01planfuerzalaboralcst'); return false;">P29</a>, como insumo para decidir la profundidad de la actualización.</li><li><strong>Redacción de la sección "Competencias digitales / IA":</strong> se añade a la descripción de cargo la plantilla estándar (sección 4), especificando herramientas, nivel esperado y límites de supervisión humana.</li><li><strong>Validación:</strong> Growth y Dirección Ejecutiva validan cambios que afecten roles críticos o de cara al cliente; el Comité de Gobernanza valida cambios que impliquen nuevas herramientas aún no evaluadas por R6.</li><li><strong>Comunicación formal:</strong> todo cambio de descripción de cargo se comunica por escrito al colaborador titular del puesto, respetando el debido proceso descrito en el <a href="#" class="doc-link" onclick="mostrarDoc('doc-culturepeople-01planfuerzalaboralcst'); return false;">P29</a> y en el Reglamento Interno de Trabajo de la empresa.</li><li><strong>Registro:</strong> la nueva versión reemplaza a la anterior en el repositorio único de descripciones de cargo, conservando el historial.</li></ol>
+<h2 id="4-plantilla-de-campo-estndar-a-incluir-en-cada-descripcin-de-cargo">4. Plantilla de campo estándar (a incluir en cada descripción de cargo)</h2>
+<pre><code>Competencias digitales / IA:
+- Nivel de exposición del rol: [Alto | Medio | Bajo]
+- Herramientas requeridas: [lista, tomada del listado de aprobadas R6]
+- Nivel esperado: [básico | intermedio | avanzado]
+- Tareas asistidas por IA: [lista]
+- Tareas que requieren supervisión/decisión humana exclusiva: [lista]
+- Última revisión: [fecha]
+- Próxima revisión programada: [fecha, máx. 6 meses después]</code></pre>
+<h2 id="5-registro-y-trazabilidad">5. Registro y trazabilidad</h2>
+<p>Talento Humano mantiene un repositorio único con la versión vigente de cada descripción de cargo y su historial de cambios, disponible para auditoría del Comité de Gobernanza y como soporte documental ante eventuales reclamos laborales, conforme al canal de reclamos del Capítulo XVI del Reglamento Interno de Trabajo de la empresa.</p>
+<hr>
+<p>*Documento controlado — Talento Humano.*</p></article></div>
+<div class="panel" id="doc-culturepeople-04kitcampanassensibilizacion"><div class="doc-meta">Personas y Cultura &middot; <code>culture_people/04_kit_campanas_sensibilizacion.md</code></div><article class="doc-content"><h1 id="kit-de-campaas-de-sensibilizacin-sobre-uso-seguro-y-tico-de-ia-p35">Kit de Campañas de Sensibilización sobre Uso Seguro y Ético de IA (P35)</h1>
+<p><strong>Empresa:</strong> COMUNICACIONES INTEGRADAS LA RED 360 S.A.S. ("Tango") <strong>Vigencia del plan de cumplimiento:</strong> 2026-09-30</p>
+<h2 id="1-objetivo">1. Objetivo</h2>
+<p>Proveer el texto completo de tres (3) comunicados internos, listos para difundir por correo electrónico y cartelera/Slack, que refuercen el uso seguro, ético y productivo de la IA entre todos los colaboradores, alineados con el cronograma del <a href="#" class="doc-link" onclick="mostrarDoc('doc-culturepeople-02plangestioncambio'); return false;">Plan de Gestión del Cambio (P30)</a>.</p>
+<hr>
+<h2 id="comunicado-1-lanzamiento-de-la-poltica-de-uso-responsable-de-ia-trimestre-1">Comunicado 1 — Lanzamiento de la Política de Uso Responsable de IA (Trimestre 1)</h2>
+<p><strong>Para:</strong> Todo el personal de Tango (COMUNICACIONES INTEGRADAS LA RED 360 S.A.S.) <strong>De:</strong> Dirección Ejecutiva <strong>Asunto:</strong> Así usamos la IA en Tango: nuestras 5 reglas de oro</p>
+<blockquote><p>Equipo,</p><p>La inteligencia artificial ya es parte de nuestro trabajo diario: nos ayuda a producir más rápido, explorar más ideas y responder mejor a nuestros clientes. Para que la usemos bien —protegiendo a nuestros clientes, a nuestros compañeros y a la compañía— a partir de hoy entra en vigencia nuestra Política de Uso Responsable de IA (G43), que se resume en 5 reglas de oro:</p><p>1. <strong>Nunca</strong> ingreses datos personales de clientes (nombres, teléfonos, correos, cédulas) ni información confidencial del negocio en herramientas de IA públicas o no aprobadas.</p><p>2. Usa solo las herramientas que están en nuestro listado de aprobadas. Si necesitas una nueva, solicítala antes de usarla siguiendo el procedimiento R6 — toma pocos días y evita riesgos grandes.</p><p>3. Revisa siempre lo que genera la IA antes de enviarlo a un cliente o publicarlo. La responsabilidad final de cada entregable sigue siendo humana, tuya.</p><p>4. Si algo sale mal —una fuga de datos, un resultado con sesgo, un error que se nos pasó— avísanos de inmediato al Director de IA. Reportar a tiempo es lo correcto y se valora; ocultarlo agrava cualquier situación.</p><p>5. La IA nos ayuda a ser mejores y a tener más tiempo para lo que de verdad requiere criterio humano. No reemplaza tu rol ni tu juicio profesional.</p><p>Estas reglas y su sustento legal completo están disponibles en la Política de Uso Responsable de IA (G43) y en los Principios Éticos para el Uso de IA (G39). En las próximas semanas tendremos sesiones de formación por área para resolver dudas prácticas.</p><p>Gracias por ayudarnos a construir una cultura de IA responsable en Tango.</p><p>Dirección Ejecutiva</p></blockquote>
+<hr>
+<h2 id="comunicado-2-uso-tico-y-productivo-en-el-da-a-da-trimestre-2-refuerzo">Comunicado 2 — Uso ético y productivo en el día a día (Trimestre 2, refuerzo)</h2>
+<p><strong>Para:</strong> Todo el personal de Tango <strong>De:</strong> Director de IA / Growth <strong>Asunto:</strong> 3 preguntas antes de usar IA en tu trabajo</p>
+<blockquote><p>Equipo,</p><p>Ya llevamos un trimestre trabajando con nuestras herramientas de IA aprobadas. Antes de seguir, un recordatorio corto y práctico: antes de pegar cualquier información en una herramienta de IA, hazte estas 3 preguntas:</p><p>1. <strong>¿Es una herramienta aprobada?</strong> Si no está en el listado vigente, no la uses con datos de trabajo. Solicítala por el procedimiento R6.</p><p>2. <strong>¿Estoy ingresando datos personales o confidenciales?</strong> Nombres, teléfonos, cifras de clientes, contratos, credenciales: si la respuesta es sí, detente. Usa una alternativa aprobada para ese tipo de información o anonimiza los datos primero.</p><p>3. <strong>¿Voy a revisar el resultado antes de usarlo?</strong> La IA es un punto de partida, no la entrega final. Ajusta, verifica y hazlo tuyo antes de compartirlo con un cliente o publicarlo.</p><p>Además, les recordamos que usar la IA de forma productiva también significa documentar cómo la usamos: qué herramienta, para qué y qué ajustes hicimos. Esto nos permite explicar nuestro trabajo con confianza cuando un cliente pregunta, y es parte de nuestro compromiso de transparencia.</p><p>Si tienen casos de uso que les hayan funcionado muy bien, compártanlos — los mejores se presentarán en la próxima sesión de formación y sus autores serán reconocidos como "campeones de IA" de su área.</p><p>Cualquier duda, el canal de contacto sigue siendo el mismo: Director de IA.</p><p>Growth / Dirección de IA</p></blockquote>
+<hr>
+<h2 id="comunicado-3-balance-del-primer-ciclo-y-reconocimientos-trimestre-4-cierre">Comunicado 3 — Balance del primer ciclo y reconocimientos (Trimestre 4, cierre)</h2>
+<p><strong>Para:</strong> Todo el personal de Tango <strong>De:</strong> Dirección Ejecutiva <strong>Asunto:</strong> Un año adoptando IA con criterio: balance y lo que viene</p>
+<blockquote><p>Equipo,</p><p>Cerramos nuestro primer ciclo anual de adopción de IA y queremos compartir un balance honesto con ustedes.</p><p><strong>Lo que logramos:</strong> la mayoría de los equipos ya usa herramientas de IA aprobadas en su trabajo diario, capacitamos a todas las áreas en uso ético y seguro, y no tuvimos incidentes graves de fuga de información gracias a que el equipo reportó a tiempo las dudas y los casos límite. Gracias especialmente a nuestros "campeones de IA" por acompañar a sus compañeros en este proceso.</p><p><strong>Lo que aprendimos:</strong> algunas áreas todavía sienten incertidumbre sobre qué tareas seguirán siendo suyas. Queremos ser claros: nuestro Plan de Fuerza Laboral (P29) prioriza la capacitación y la reubicación interna por encima de cualquier otra medida, y ningún cambio de funciones se hace sin conversación previa y por escrito con la persona involucrada.</p><p><strong>Lo que viene:</strong> actualizaremos el cronograma de formación para el próximo ciclo con base en lo que ustedes nos compartieron en la encuesta interna, y seguiremos revisando semestralmente las descripciones de cargo para que reflejen las herramientas que realmente usamos.</p><p>Gracias por su compromiso con hacer esto bien, no solo rápido.</p><p>Dirección Ejecutiva</p></blockquote>
+<hr>
+<h2 id="2-calendario-de-difusin">2. Calendario de difusión</h2>
+<p>Alineado con el <a href="#" class="doc-link" onclick="mostrarDoc('doc-culturepeople-02plangestioncambio'); return false;">Plan de Gestión del Cambio (P30)</a>: el Comunicado 1 se envía en el kickoff de T1 (correo + cartelera/Slack), el Comunicado 2 se envía a mitad de T2 como refuerzo práctico, y el Comunicado 3 cierra el ciclo en T4 junto con la presentación de resultados al Comité de Gobernanza.</p>
+<h2 id="3-canales-de-difusin">3. Canales de difusión</h2>
+<ul><li>Correo electrónico corporativo a toda la nómina.</li><li>Cartelera física / canal de Slack general, con una versión resumida de máximo 3 líneas por comunicado para quienes no abran el correo completo.</li><li>Presentación oral breve (5 minutos) en la reunión general de cada trimestre, a cargo de quien firma el comunicado.</li></ul>
+<hr>
+<p>*Documento controlado — Talento Humano / Growth.*</p></article></div>
+<div class="panel" id="doc-growthops-dossiergocurador"><div class="doc-meta">Datos y Producto (Growth) &middot; <code>growth_ops/dossier_go_curador.md</code></div><article class="doc-content"><h1 id="dossier-de-producto-go-curador-v18">Dossier de Producto: GO CURADOR (V18)</h1>
+<p><strong>Empresa:</strong> COMUNICACIONES INTEGRADAS LA RED 360 S.A.S. ("Tango") <strong>Vigencia del plan de cumplimiento:</strong> 2026-09-30 <strong>Marco de referencia:</strong> Ley 2300 de 2023 (régimen de contactabilidad y protección al consumidor), Ley 1581 de 2012 (Habeas Data).</p>
+<h2 id="1-propuesta-de-valor">1. Propuesta de valor</h2>
+<p>GO CURADOR resuelve un problema concreto de los clientes de Tango: tienen audiencias y bases de datos grandes, pero carecen de capacidad para curar, segmentar y activar esa información de forma relevante y, al mismo tiempo, cumplir con la normativa de contactabilidad. GO CURADOR ofrece:</p>
+<ul><li><strong>Curaduría inteligente:</strong> selección y priorización de contenido y audiencias asistida por IA, reduciendo el tiempo de armado de campañas frente a un proceso manual.</li><li><strong>Cumplimiento por diseño:</strong> a diferencia de herramientas genéricas de marketing automation, GO CURADOR incorpora de forma nativa los límites de la Ley 2300 de 2023 (canal, horario, frecuencia, opt-out), de modo que el cliente no depende de la disciplina manual de su equipo para no incurrir en contactabilidad indebida.</li><li><strong>Trazabilidad para auditoría:</strong> cada campaña queda con evidencia de consentimiento, canal autorizado y cumplimiento de límites, útil ante una eventual revisión de la SIC o un reclamo de un titular.</li><li><strong>Reportería de desempeño:</strong> métricas de apertura, respuesta y conversión por segmento, con retroalimentación al motor de curaduría para mejorar la relevancia de los próximos envíos.</li></ul>
+<p><strong>Segmento objetivo:</strong> clientes de Tango con bases de datos propias (CRM, listas de suscriptores, bases de leads) que requieren campañas recurrentes de contactabilidad o divulgación de contenido curado, y que necesitan reducir su riesgo regulatorio sin sacrificar velocidad de ejecución.</p>
+<h2 id="2-arquitectura-tcnica">2. Arquitectura técnica</h2>
+<p>GO CURADOR se compone de cuatro módulos, diseñados para que el control de cumplimiento no sea una capa añadida sino parte del flujo de datos:</p>
+<ol><li><strong>Módulo de ingesta y normalización de datos:</strong> recibe las bases del cliente (CRM, formularios, listas), valida su estructura mínima (identificador de titular, canal autorizado, fecha y evidencia de consentimiento) y rechaza registros sin trazabilidad de autorización antes de que entren al resto del sistema.</li><li><strong>Motor de curaduría y segmentación (asistido por IA):</strong> clasifica y prioriza audiencias y contenido según criterios definidos por el cliente y el histórico de desempeño, respetando siempre las exclusiones activas (opt-out) provenientes del módulo de cumplimiento.</li><li><strong>Módulo de cumplimiento de contactabilidad ("guardrail" de Ley 2300):</strong> capa obligatoria, no desactivable por el usuario final, que valida canal autorizado, horario y frecuencia antes de permitir cualquier envío (detalle en la sección 3). Ningún mensaje sale del sistema sin pasar por este módulo.</li><li><strong>Módulo de ejecución y reportería:</strong> conecta con los canales de envío (email, SMS, WhatsApp Business API, notificaciones push) ya autorizados por cada titular, y registra el resultado de cada campaña para retroalimentar el motor de curaduría y para fines de auditoría.</li></ol>
+<p><strong>Principio de diseño:</strong> el módulo de cumplimiento (3) se ubica *antes* del módulo de ejecución (4) en el flujo de datos, de forma que ninguna campaña pueda saltarse la validación normativa por error de configuración humana.</p>
+<h2 id="3-requisitos-de-cumplimiento-ley-2300-de-2023">3. Requisitos de cumplimiento — Ley 2300 de 2023</h2>
+<p>Cuando GO CURADOR incluya contactabilidad o divulgación masiva, el producto <strong>debe</strong> implementar de forma nativa (no opcional) los siguientes controles en su módulo de cumplimiento:</p>
+<h3 id="31-canales">3.1 Canales</h3>
+<ul><li>Registro explícito del canal autorizado por el titular para cada contacto (no asumir consentimiento cruzado entre canales).</li><li>Bloqueo automático de envío por un canal no autorizado por el titular.</li></ul>
+<h3 id="32-horarios">3.2 Horarios</h3>
+<ul><li>Restricción de horario de contacto a la franja permitida por la normativa vigente para contactabilidad comercial (por defecto, horario diurno en días hábiles; el Comité de Gobernanza valida el rango exacto vigente antes de cada lanzamiento).</li><li>Bloqueo técnico de envíos fuera del horario permitido, sin excepción manual salvo aprobación registrada y documentada por el Comité de Gobernanza.</li></ul>
+<h3 id="33-frecuencia">3.3 Frecuencia</h3>
+<ul><li>Límite configurable de número máximo de contactos por titular en una ventana de tiempo (ej. por semana/mes), con tope por defecto conservador.</li><li>Registro de historial de contactos por titular para evitar sobre-contactabilidad entre campañas simultáneas del mismo cliente.</li></ul>
+<h3 id="34-consentimiento-y-exclusin">3.4 Consentimiento y exclusión</h3>
+<ul><li>Toda base usada en contactabilidad debe tener trazabilidad de la autorización del titular (fecha, canal, finalidad autorizada), conforme a <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-02procesoscumplimientosic'); return false;">G40</a>.</li><li>Mecanismo obligatorio y visible de exclusión/opt-out en cada contacto, con efecto inmediato y verificable.</li><li>Las solicitudes de exclusión se procesan y aplican en un plazo máximo definido por la normativa vigente, y bloquean al titular en todos los canales del cliente, no solo en el canal donde se solicitó.</li></ul>
+<h2 id="4-requisitos-de-datos-ley-1581">4. Requisitos de datos (Ley 1581)</h2>
+<ul><li>Antes de cargar una base en GO CURADOR, verificar el checklist de la sección 4 de <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-02procesoscumplimientosic'); return false;">G40</a> (autorización, registro RNBD si aplica, datos sensibles).</li><li>GO CURADOR no debe usar datos de una campaña de un cliente para mejorar modelos o segmentaciones de otro cliente, salvo agregación completamente anonimizada.</li><li>El módulo de ingesta (sección 2.1) es el punto de control técnico de este requisito: rechaza cualquier intento de mezclar bases de distintos clientes en el mismo proceso de entrenamiento o afinamiento del motor de curaduría.</li></ul>
+<h2 id="5-gobernanza-del-producto">5. Gobernanza del producto</h2>
+<ul><li>Todo cambio funcional que afecte contactabilidad (nuevo canal, cambio de límites de frecuencia) requiere validación de Growth y del Director de IA antes de salir a producción, siguiendo el <a href="#" class="doc-link" onclick="mostrarDoc('doc-governance-04estatutocomitegobernanza'); return false;">protocolo de decisiones del Estatuto G44</a>.</li><li>Auditoría trimestral de cumplimiento de horarios/frecuencia sobre una muestra de campañas activas, a cargo del Director de IA.</li><li>Cualquier proveedor externo de infraestructura de IA usado dentro de GO CURADOR se evalúa con la <a href="evaluacion_proveedores_ia.json" target="_blank" rel="noopener">matriz I52</a> antes de integrarse.</li></ul>
+<h2 id="6-mtricas-de-control-sugeridas">6. Métricas de control sugeridas</h2>
+<ul><li>% de campañas con trazabilidad completa de consentimiento.</li><li>Tiempo promedio de procesamiento de solicitudes de exclusión.</li><li>Número de incidentes de contactabilidad fuera de horario o frecuencia permitida (meta: 0).</li><li>% de registros rechazados en ingesta por falta de evidencia de consentimiento (indicador de calidad de las bases del cliente).</li></ul>
+<hr>
+<p>*Documento controlado — Growth / Comité de Gobernanza de IA.*</p></article></div>
+    </main>
+  </div>
+  <script>
+function mostrarDoc(id) {
+  document.querySelectorAll('.panel').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.nav-item').forEach(function(b) { b.classList.remove('active'); });
+  var panel = document.getElementById(id);
+  if (panel) { panel.classList.add('active'); }
+  var boton = document.querySelector('.nav-item[data-target="' + id + '"]');
+  if (boton) { boton.classList.add('active'); }
+  var contenido = document.querySelector('.content');
+  if (contenido) { contenido.scrollTop = 0; }
+}
+</script>
+</body>
+</html>
